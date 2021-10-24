@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "sdb"
+version = "0.1.0"
+description = ""
+authors = ["Sofia Mishukova <sonya.mishukova7@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+Flask = "^2.0.2"
+Faker = "^9.5.2"
+mmh3 = "^3.0.0"
+perfplot = "^0.9.11"
+yapf = {extras = ["toml"], version = "^0.31.0"}
+ujson = "^4.2.0"
+#exectiming = "^2.0.1"
+
+[tool.poetry.dev-dependencies]
+ipdb = "^0.13.9"
+isort = "^5.9.3"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+server = "sdb.server:main"
+perf_add = "sdb.perf:perf_add"
+perf_search = "sdb.perf:perf_search"
+perf_del = "sdb.perf:perf_del"

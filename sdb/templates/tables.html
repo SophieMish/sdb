@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+  <form action="{{ url_for('create') }}" method="GET" id="create_table">
+  <input id="create_table" type="hidden">
+  <button type="create_table">Create table</button>
+  </form>
+
+  <table id="data" class="table table-striped">
+    <thead>
+      <tr>
+          <th>Name</th>
+          <th>Columns</th>
+          <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for table in tables_info %}
+        <tr>
+          <td><a href="{{ url_for('table', name=table.name) }}"> {{ table.name }} </a> </td>
+          <td>{{ table.columns|safe }}</td>
+
+          <td>
+            <form action="{{ url_for('delete_table') }}" method="POST" id="delete_table">
+            <input id="delete_table" name="table_name" type="hidden" value="{{table.name}}">
+            <button type="submit">Delete</button>
+            </form>
+
+        </td>
+
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+
+{% endblock %}
+
+

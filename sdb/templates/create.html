@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Table builder</title>
+<style>
+    table{
+        width: 100%;
+        margin: 20px 0;
+        border-collapse: collapse;
+    }
+    table, th, td{
+        border: 1px solid #cdcdcd;
+    }
+    table th, table td{
+        padding: 5px;
+        text-align: left;
+    }
+</style>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script>
+    $(document).ready(function(){
+        $(".add-row").click(function(){
+            var name = $("#name").val();
+            var column_type = $("#column-type").val();
+            var is_key = $("#is-key").is(':checked');
+            var markup = "<tr><td><input type='checkbox' name='record'></td><td>" + name + "</td><td>" + column_type + "</td><td>" + is_key + "</td></tr>";
+            $("table tbody").append(markup);
+        });
+
+        // Find and remove selected table rows
+        $(".delete-row").click(function(){
+            $("table tbody").find('input[name="record"]').each(function(){
+                if($(this).is(":checked")){
+                    $(this).parents("tr").remove();
+                }
+            });
+        });
+
+        $(".submit-table").click(function(){
+            var data = {};
+            data["name"] = $("#table-name").val();
+            data["columns"] = [];
+            if (data["name"] == "") {
+              alert("Please set table name");
+              return;
+            };
+
+            $("table tbody").find('input[name="record"]').each(function(){
+                var td = $(this).parents("tr").find("td").slice(1);
+                var name = td[0].textContent;
+                var type = td[1].textContent;
+                var is_key = td[2].textContent == "true";
+                data["columns"].push({"name": name, "type": type, "is_key": is_key});
+            });
+
+            if (data["columns"].length == 0) {
+              alert("Please add at least one row");
+              return;
+            }
+            var baseURL = "{{ request.root_url }}";
+            var url = `${baseURL}create`;
+            $.ajax({
+              type: "POST",
+              url: url,
+              data: JSON.stringify(data),
+              contentType: "application/json; charset=utf-8",
+              dataType: "json",
+              complete: function() {
+                window.location.href = baseURL;
+              }
+            });
+        });
+
+    });
+</script>
+</head>
+<body>
+    <form>
+      <input type="text" id="table-name" placeholder="Table name">
+    </form>
+    <form>
+        <input type="text" id="name" placeholder="Name">
+        <label for="column-type">Type:</label>
+        <select id="column-type" name="column-type">
+            <option value="str">String</option>
+            <option value="int">Int</option>
+            <option value="float">Float</option>
+        </select>
+        <label for="is-key">Key:</label>
+        <input type="checkbox" id="is-key">
+        <input type="button" class="add-row" value="Add Row">
+    </form>
+    <table>
+        <thead>
+            <tr>
+                <th>Select</th>
+                <th>Column name</th>
+                <th>Column type</th>
+                <th>Is key</th>
+            </tr>
+        </thead>
+        <tbody>
+
+        </tbody>
+    </table>
+    <button type="button" class="delete-row">Delete Row</button>
+    <form>
+      <button type="button" class="submit-table">Submit</button>
+    </form>
+    <form action="{{ url_for('index') }}" method="GET">
+      <button type="cancel">Cancel</button>
+    </form>
+</body>
+</html>

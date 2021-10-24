@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Table {{ table_name }}</title>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
+<link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet">
+<script src="http://code.jquery.com/jquery-2.0.3.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+
+
+<link href="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.0/bootstrap3-editable/css/bootstrap-editable.css" rel="stylesheet"/>
+<script src="//cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.0/bootstrap3-editable/js/bootstrap-editable.min.js"></script>
+
+
+<script>
+    $(document).ready(function(){
+        $(".add-row").click(function(){
+            var name = $("#name").val();
+            var column_type = $("#column-type").val();
+            var is_key = $("#is-key").is(':checked');
+            var markup = "<tr><td><input type='checkbox' name='record'></td><td>" + name + "</td><td>" + column_type + "</td><td>" + is_key + "</td></tr>";
+            $("table tbody").append(markup);
+        });
+
+        // Find and remove selected table rows
+        $(".delete-row").click(function(){
+            $("table tbody").find('input[name="record"]').each(function(){
+                if($(this).is(":checked")){
+                    $(this).parents("tr").remove();
+                }
+            });
+        });
+
+        $(".submit-table").click(function(){
+            var data = {};
+            data["name"] = $("#table-name").val();
+            data["columns"] = [];
+            if (data["name"] == "") {
+              alert("Please set table name");
+              return;
+            };
+
+            $("table tbody").find('input[name="record"]').each(function(){
+                var td = $(this).parents("tr").find("td").slice(1);
+                var name = td[0].textContent;
+                var type = td[1].textContent;
+                var is_key = td[2].textContent == "true";
+                data["columns"].push({"name": name, "type": type, "is_key": is_key});
+            });
+
+            if (data["columns"].length == 0) {
+              alert("Please add at least one row");
+              return;
+            }
+            var baseURL = "{{ request.root_url }}";
+            var url = `${baseURL}create`;
+            $.ajax({
+              type: "POST",
+              url: url,
+              data: JSON.stringify(data),
+              contentType: "application/json; charset=utf-8",
+              dataType: "json",
+              complete: function() {
+                window.location.href = baseURL;
+              }
+            });
+        });
+
+    });
+</script>
+</head>
+
+<body>
+  <div>
+  <form style="margin-bottom:20px" action="javascript:void(0);">
+    <button class="back-to-tables">Back</button>
+    <button class="to-csv">Export to CSV</button>
+    <button class="export-backup">Export backup</button>
+  </form>
+
+  </div>
+   <form enctype="multipart/form-data" method="POST" style="margin-bottom:20px" action="{{ url_for('backup', name=table_name) }}">
+      <label for="file">Upload backup</label>
+      <input type=file name="file">
+      <input type = "submit"/>
+    </form>
+  <form action="javascript:void(0);">
+    <label for="filter-column">Filter column:</label>
+    <select id="filter-column">
+      <option value="none">None</option>
+      {% for column in columns %}
+      <option value="{{ column }}">{{ column }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="filter-value">Filter value:</label>
+    <input type="text" id="filter-value" placeholder="Filter value">
+    <button class="submit-filter">Filter</button>
+    <button class="delete-records">Delete</button>
+    <button class="reset-filter">Reset</button>
+  </form>
+
+  <table id="data" class="table table-striped">
+    <thead>
+      <tr>
+        {% for column in columns %}
+
+          <th> {{ column }} </th>
+
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+
+        <tr>
+          {% for column in columns %}
+
+          <td>
+            <div class="{{ column }}" data-name="{{ column }}" data-type="{{ column_types[column] }}" data-pk={{ row.pk }} data-url="{{ request.root_url }}table/{{ table_name }}" data-title="Enter {{ column }}" >{{ row[column] }} </div>
+          </td>
+          {% endfor %}
+        </tr>
+
+      {% endfor %}
+      <tr>
+        {% for column in columns %}
+        <td> <input type="text" id="new-{{ column }}" placeholder="{{ column }}">  </td>
+        {% endfor %}
+      </tr>
+    </tbody>
+
+  </table>
+
+  <button class="add-record">Add record</button>
+
+<script>
+    $(document).ready(function(){
+        $.fn.editable.defaults.ajaxOptions = {type: "PATCH"};
+
+        {% for column in columns %}
+          $('.{{ column }}').editable();
+        {% endfor %}
+
+        const rows_len =  "{{ rows|length }}";
+
+
+        {% if (filter_value is not none) and (filter_column is not none) %}
+        $("#filter-column").val("{{ filter_column }}").change();
+        $("#filter-value").val("{{ filter_value }}").change();
+        {% else %}
+        $(".reset-filter").prop('disabled', true);
+        {% endif %}
+
+        $(".add-record").click(function() {
+          var values = {};
+          for (const name of {{ columns|safe }}) {
+            var el = `new-${name}`;
+            var value = $('#'+el).val();
+
+            if (value == '') {
+              alert("please specify all records values");
+              return;
+            };
+            values[name] = value;
+          };
+
+          var baseURL = "{{ request.root_url }}";
+          var table = "{{ table_name }}";
+          var _url = `${baseURL}table/${table}`;
+
+          var baseURL = "{{ request.root_url }}";
+          var table = "{{ table_name }}";
+          var _url = `${baseURL}table/${table}`;
+
+          var url = new URL(_url);
+          if ($("#filter-column").val() != "none" && $("#filter-value").val() != "") {
+            url.searchParams.append("filter_column", $("#filter-column").val());
+            url.searchParams.append("filter_value", $("#filter-value").val());
+          };
+
+          $.ajax({
+            type: "POST",
+            url: url.href,
+            data: JSON.stringify(values),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            complete: function() {
+              window.location.href = url.href;
+            }
+          });
+        });
+
+        $(".delete-records").click(function(){
+          if ($("#filter-column").val() == "none" || $("#filter-value").val() == "") {
+            return;
+          };
+          var baseURL = "{{ request.root_url }}";
+          var table = "{{ table_name }}";
+          var _url = `${baseURL}table/${table}`;
+
+          var baseURL = "{{ request.root_url }}";
+          var table = "{{ table_name }}";
+          var _url = `${baseURL}table/${table}`;
+
+          var url = new URL(_url);
+          url.searchParams.append("filter_column", $("#filter-column").val());
+          url.searchParams.append("filter_value", $("#filter-value").val());
+
+          $.ajax({
+            type: "DELETE",
+            url: url.href,
+            complete: function() {
+              window.location.href = url.href;
+            }
+          });
+
+        });
+
+        $(".back-to-tables").click(function(){
+          var baseURL = "{{ request.root_url }}";
+          $.ajax({
+            type: "GET",
+            url: baseURL,
+            complete: function() {
+              window.location.href = baseURL;
+            }
+          });
+        });
+
+        $(".to-csv").click(function(){
+          var baseURL = "{{ request.root_url }}table/{{ table_name }}/csv";
+          $.ajax({
+            type: "GET",
+            url: baseURL,
+            complete: function() {
+              window.location.href = baseURL;
+            }
+          });
+        });
+
+        $(".export-backup").click(function(){
+          var baseURL = "{{ request.root_url }}backup/{{ table_name }}";
+          $.ajax({
+            type: "GET",
+            url: baseURL,
+            complete: function() {
+              window.location.href = baseURL;
+            }
+          });
+        });
+
+        $(".submit-filter").click(function(){
+          if ($("#filter-column").val() == "none" || $("#filter-value").val() == "") {
+            return;
+          };
+
+          var baseURL = "{{ request.root_url }}";
+          var table = "{{ table_name }}";
+          var _url = `${baseURL}table/${table}`;
+
+          var baseURL = "{{ request.root_url }}";
+          var table = "{{ table_name }}";
+          var _url = `${baseURL}table/${table}`;
+
+          var url = new URL(_url);
+          url.searchParams.append("filter_column", $("#filter-column").val());
+          url.searchParams.append("filter_value", $("#filter-value").val());
+
+          $.ajax({
+            type: "GET",
+            url: url.href,
+            complete: function() {
+              window.location.href = url.href;
+            }
+          });
+        });
+
+        $(".reset-filter").click(function(){
+          $("#filter-column").val("none").change();
+          $("#filter-value").val("").change();
+
+          var baseURL = "{{ request.root_url }}";
+          var table = "{{ table_name }}";
+          var _url = `${baseURL}table/${table}`;
+
+          var baseURL = "{{ request.root_url }}";
+          var table = "{{ table_name }}";
+          var _url = `${baseURL}table/${table}`;
+
+          var url = new URL(_url);
+
+          $.ajax({
+            type: "GET",
+            url: url.href,
+            complete: function() {
+              window.location.href = url.href;
+            }
+          });
+        });
+    });
+</script>
+</body>
+
+
+
